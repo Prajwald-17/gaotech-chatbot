@@ -73,8 +73,12 @@ Guidelines:
         # Build context from retrieved chunks
         context_text = ""
         for i, chunk in enumerate(context_chunks):
-            source_info = f"Source: {chunk['source']['title']} ({chunk['source']['url']})"
-            context_text += f"\n--- Context {i+1} ---\n{source_info}\n{chunk['text']}\n"
+            if 'source' in chunk:
+                source_info = f"Source: {chunk['source']['title']} ({chunk['source']['url']})"
+            else:
+                source_info = "Source: GaoTech Knowledge Base"
+            content = chunk.get('content', chunk.get('text', ''))
+            context_text += f"\n--- Context {i+1} ---\n{source_info}\n{content}\n"
         
         # Build final prompt
         prompt = f"""{system_prompt}
@@ -147,8 +151,9 @@ ANSWER (based on the website content above):"""
         sources = set()
         
         for chunk in context_chunks:
-            relevant_info.append(chunk['text'])
-            sources.add(chunk['source']['url'])
+            relevant_info.append(chunk.get('content', chunk.get('text', '')))
+            if 'source' in chunk and 'url' in chunk['source']:
+                sources.add(chunk['source']['url'])
         
         # Build more intelligent template response based on query type
         answer = self._build_contextual_answer(query_lower, relevant_info, sources)
@@ -230,28 +235,38 @@ ANSWER (based on the website content above):"""
     
     def chat(self, query: str, include_sources: bool = True) -> Dict:
         """Main chat function"""
-        
-        # Retrieve relevant context
-        context_chunks = self.retrieve_context(query, top_k=5)
-        
-        # Build prompt
-        prompt = self.build_prompt(query, context_chunks)
-        
-        # Generate answer
-        if self.use_openai:
-            result = self.generate_answer_openai(prompt)
-        else:
-            result = self.generate_answer_free(query, context_chunks)
-        
-        # Add metadata
-        result.update({
-            'query': query,
-            'timestamp': datetime.now().isoformat(),
-            'context_chunks_count': len(context_chunks),
-            'sources': [chunk['source'] for chunk in context_chunks] if include_sources else []
-        })
-        
-        return result
+        try:
+            # Retrieve relevant context
+            context_chunks = self.retrieve_context(query, top_k=5)
+            
+            # Build prompt
+            prompt = self.build_prompt(query, context_chunks)
+            
+            # Generate answer
+            if self.use_openai:
+                result = self.generate_answer_openai(prompt)
+            else:
+                result = self.generate_answer_free(query, context_chunks)
+            
+            # Add metadata
+            result.update({
+                'query': query,
+                'timestamp': datetime.now().isoformat(),
+                'context_chunks_count': len(context_chunks),
+                'sources': [chunk.get('source', {}) for chunk in context_chunks] if include_sources else []
+            })
+            
+            return result
+            
+        except Exception as e:
+            print(f"Error in chat method: {e}")
+            return {
+                'response': f"I apologize, but I encountered an issue while processing your question about Real Estate IoT. Please try rephrasing your question or ask about our IoT solutions, smart building technology, or career opportunities. Error details: {str(e)}",
+                'status': 'error',
+                'error': str(e),
+                'query': query,
+                'timestamp': datetime.now().isoformat()
+            }
     
     def get_conversation_starter(self) -> List[str]:
         """Get suggested conversation starters based on website content"""
