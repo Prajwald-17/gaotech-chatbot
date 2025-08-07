@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, render_template_string
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.core.chatbot_engine import ChatbotEngine
 import json
 
-app = Flask(__name__)
+# Set template folder path
+template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+app = Flask(__name__, template_folder=template_dir)
 
 # Initialize chatbot
 chatbot = None
@@ -31,7 +33,94 @@ def init_chatbot():
 @app.route('/')
 def index():
     """Main chat interface"""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        print(f"Template error: {e}")
+        # Fallback to inline HTML
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GaoTech Intelligent Chatbot</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .chat-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .chat-header { text-align: center; color: #2c3e50; margin-bottom: 20px; }
+        .messages { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .message { margin: 10px 0; padding: 10px; border-radius: 8px; }
+        .user { background: #e3f2fd; text-align: right; }
+        .bot { background: #f5f5f5; }
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 12px 20px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1976d2; }
+        .starters { margin: 15px 0; }
+        .starter-btn { display: inline-block; margin: 5px; padding: 8px 15px; background: #e8f4fd; border: 1px solid #2196f3; border-radius: 20px; cursor: pointer; font-size: 14px; }
+        .starter-btn:hover { background: #2196f3; color: white; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🏠 GaoTech Intelligent Chatbot</h1>
+            <p>Ask me about Real Estate IoT solutions and smart building technologies</p>
+        </div>
+        
+        <div class="starters" id="starters">
+            <div class="starter-btn" onclick="sendMessage('What IoT solutions does GaoTech offer?')">What IoT solutions does GaoTech offer?</div>
+            <div class="starter-btn" onclick="sendMessage('Tell me about smart building technologies')">Tell me about smart building technologies</div>
+            <div class="starter-btn" onclick="sendMessage('How can GaoTech help with property management?')">How can GaoTech help with property management?</div>
+        </div>
+        
+        <div class="messages" id="messages"></div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Ask about GaoTech IoT solutions..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage(text) {
+            const input = document.getElementById('messageInput');
+            const message = text || input.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            if (!text) input.value = '';
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage(data.response || data.answer || 'Sorry, I encountered an error.', 'bot');
+            })
+            .catch(error => {
+                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            });
+        }
+
+        function addMessage(text, sender) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Add welcome message
+        addMessage('Hello! I\\'m the GaoTech chatbot. Ask me about our Real Estate IoT solutions and smart building technologies!', 'bot');
+    </script>
+</body>
+</html>
+        """)
 
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
@@ -45,6 +134,13 @@ def chat_api():
                 'error': 'Empty message',
                 'status': 'error'
             }), 400
+        
+        # Check if chatbot is initialized
+        if not chatbot:
+            return jsonify({
+                'response': 'I apologize, but the chatbot service is currently initializing. Please try again in a moment.',
+                'status': 'error'
+            })
         
         # Get response from chatbot
         response = chatbot.chat(query, include_sources=True)
@@ -94,16 +190,11 @@ def get_status():
         })
 
 # Initialize chatbot when module is imported (for gunicorn)
-os.makedirs('templates', exist_ok=True)
-os.makedirs('static', exist_ok=True)
-
-# Setup NLTK data if needed
 try:
-    import nltk
-    nltk.download('punkt', quiet=True)
-    nltk.download('stopwords', quiet=True)
-except Exception as e:
-    print(f"NLTK setup warning: {e}")
+    os.makedirs('templates', exist_ok=True)
+    os.makedirs('static', exist_ok=True)
+except:
+    pass
 
 init_chatbot()
 
