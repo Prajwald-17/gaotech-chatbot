@@ -11,17 +11,22 @@ import os
 import sys
 
 # Add the parent directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+src_dir = os.path.join(parent_dir, 'src')
 
-from src.web.web_interface import app
+sys.path.insert(0, parent_dir)
+sys.path.insert(0, src_dir)
 
-# This is required for Vercel
-def handler(request):
-    return app(request.environ, lambda status, headers: None)
+try:
+    from src.web.web_interface import app
+except ImportError:
+    # Fallback import path
+    sys.path.insert(0, os.path.join(parent_dir, 'src', 'web'))
+    from web_interface import app
 
 # Export the app for Vercel
-application = app
+app = app
 
 if __name__ == '__main__':
     app.run(debug=True)
