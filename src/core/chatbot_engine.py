@@ -35,16 +35,9 @@ class ChatbotEngine:
         if not self.vector_store.load_index():
             print("Warning: Vector store not found. Please run the setup process first.")
         
-        # Set up OpenAI if key provided and available
-        if openai_api_key and OPENAI_AVAILABLE:
-            self.use_openai = True
-            print(f"OpenAI API key loaded. Using {model_name} for responses.")
-        else:
-            self.use_openai = False
-            if not OPENAI_AVAILABLE:
-                print("OpenAI not available. Using free alternatives.")
-            else:
-                print("No OpenAI API key provided. Using free alternatives.")
+        # Force non-OpenAI mode for now to avoid client issues
+        self.use_openai = False
+        print("Using template-based responses (OpenAI disabled for stability).")
     
     def retrieve_context(self, query: str, top_k: int = 5) -> List[Dict]:
         """Retrieve relevant context from vector store"""
@@ -135,34 +128,73 @@ ANSWER (based on the website content above):"""
     def generate_answer_free(self, query: str, context_chunks: List[Dict]) -> Dict:
         """Generate answer using free alternatives (template-based)"""
         
-        # Simple template-based response for free version
-        if not context_chunks:
+        try:
+            query_lower = query.lower()
+            
+            # If no context chunks, provide general information
+            if not context_chunks:
+                if 'iot' in query_lower or 'sensor' in query_lower:
+                    answer = "GaoTech provides advanced IoT solutions including smart sensors, automated systems, and energy management for buildings. Our IoT technology helps optimize building performance and reduce operational costs."
+                elif 'smart building' in query_lower or 'building' in query_lower:
+                    answer = "Our smart building solutions include automated lighting, HVAC control, security systems, and energy monitoring. We help transform traditional buildings into intelligent, efficient spaces."
+                elif 'energy' in query_lower:
+                    answer = "GaoTech's energy management solutions help reduce building operating costs through intelligent monitoring, automated controls, and predictive maintenance."
+                elif 'contact' in query_lower:
+                    answer = "You can contact GaoTech for more information about our Real Estate IoT solutions and smart building technologies. We offer free consultations and custom solution design."
+                elif 'service' in query_lower or 'what do you do' in query_lower:
+                    answer = "GaoTech specializes in Real Estate IoT solutions, smart building technologies, property management systems, and comprehensive technology services for the real estate industry."
+                else:
+                    answer = "GaoTech is a leading provider of Real Estate IoT solutions and smart building technologies. We offer comprehensive services including smart sensors, automated systems, energy management, and property management solutions. How can I help you learn more about our specific offerings?"
+                
+                return {
+                    'response': answer,
+                    'model': 'template-based',
+                    'status': 'success'
+                }
+            
+            # Extract key information from context chunks
+            relevant_content = []
+            for chunk in context_chunks:
+                content = chunk.get('content', chunk.get('text', ''))
+                if content:
+                    relevant_content.append(content)
+            
+            # Use the most relevant content
+            if relevant_content:
+                # Combine and use the best matching content
+                combined_content = ' '.join(relevant_content[:2])  # Use top 2 chunks
+                
+                # Add context-specific enhancements based on query
+                if 'how' in query_lower:
+                    answer = f"{combined_content} Our expert team will work with you to design and implement the perfect solution for your specific needs."
+                elif 'cost' in query_lower or 'price' in query_lower:
+                    answer = f"{combined_content} Our solutions are designed to provide excellent ROI through energy savings and operational efficiency. Contact us for a personalized quote."
+                elif 'benefit' in query_lower:
+                    answer = f"{combined_content} These solutions can help reduce operating costs by up to 30% while improving building efficiency and tenant satisfaction."
+                else:
+                    answer = combined_content
+                
+                return {
+                    'response': answer,
+                    'model': 'template-based',
+                    'status': 'success'
+                }
+            
+            # Fallback response
             return {
-                'answer': "I don't have specific information about that topic in my knowledge base. Please visit realestateiot.com for more details or contact them directly.",
+                'response': "Thank you for your question about GaoTech! We're a leading provider of Real Estate IoT solutions and smart building technologies. Our services include smart sensors, automated systems, energy management, and property management solutions. How can I help you learn more about our specific offerings?",
                 'model': 'template-based',
                 'status': 'success'
             }
-        
-        # Extract the query to provide more targeted responses
-        query_lower = query.lower()
-        
-        # Extract key information from context
-        relevant_info = []
-        sources = set()
-        
-        for chunk in context_chunks:
-            relevant_info.append(chunk.get('content', chunk.get('text', '')))
-            if 'source' in chunk and 'url' in chunk['source']:
-                sources.add(chunk['source']['url'])
-        
-        # Build more intelligent template response based on query type
-        answer = self._build_contextual_answer(query_lower, relevant_info, sources)
-        
-        return {
-            'answer': answer,
-            'model': 'template-based',
-            'status': 'success'
-        }
+            
+        except Exception as e:
+            print(f"Error in generate_answer_free: {e}")
+            return {
+                'response': "I apologize, but I'm experiencing technical difficulties. GaoTech specializes in Real Estate IoT solutions and smart building technologies. Please try asking your question again or contact us directly for more information.",
+                'model': 'template-based',
+                'status': 'error',
+                'error': str(e)
+            }
     
     def _build_contextual_answer(self, query_lower: str, relevant_info: List[str], sources: set) -> str:
         """Build a contextual answer based on the query type"""
