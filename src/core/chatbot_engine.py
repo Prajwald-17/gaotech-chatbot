@@ -1,11 +1,18 @@
 import json
 from typing import List, Dict, Optional
-from .lightweight_vector_store import LightweightVectorStore
-import openai
+from .simple_vector_store import SimpleVectorStore
 import requests
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+
+# Optional OpenAI import
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    print("OpenAI not available. Using fallback responses.")
 
 # Load environment variables
 load_dotenv()
@@ -20,8 +27,7 @@ class ChatbotEngine:
         if not openai_api_key:
             openai_api_key = os.getenv('OPENAI_API_KEY')
         
-        self.vector_store = LightweightVectorStore(use_openai=use_openai_embeddings, 
-                                                 openai_api_key=openai_api_key)
+        self.vector_store = SimpleVectorStore()
         self.openai_api_key = openai_api_key
         self.model_name = model_name
         
@@ -29,13 +35,16 @@ class ChatbotEngine:
         if not self.vector_store.load_index():
             print("Warning: Vector store not found. Please run the setup process first.")
         
-        # Set up OpenAI if key provided
-        if openai_api_key:
+        # Set up OpenAI if key provided and available
+        if openai_api_key and OPENAI_AVAILABLE:
             self.use_openai = True
             print(f"OpenAI API key loaded. Using {model_name} for responses.")
         else:
             self.use_openai = False
-            print("No OpenAI API key provided. Using free alternatives.")
+            if not OPENAI_AVAILABLE:
+                print("OpenAI not available. Using free alternatives.")
+            else:
+                print("No OpenAI API key provided. Using free alternatives.")
     
     def retrieve_context(self, query: str, top_k: int = 5) -> List[Dict]:
         """Retrieve relevant context from vector store"""
@@ -81,6 +90,14 @@ ANSWER (based on the website content above):"""
     
     def generate_answer_openai(self, prompt: str) -> Dict:
         """Generate answer using OpenAI API"""
+        if not OPENAI_AVAILABLE:
+            return {
+                'answer': "OpenAI is not available. Please install the openai package.",
+                'model': 'fallback',
+                'status': 'error',
+                'tokens_used': 0
+            }
+        
         try:
             client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
             
