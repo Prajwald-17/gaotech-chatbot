@@ -84,16 +84,16 @@ class SimpleChatbotEngine:
                 "source": {"title": "About GaoTech", "url": "https://gaotech.com/about"}
             },
             {
-                "content": "Our IoT solutions include smart sensors for temperature, humidity, occupancy detection, automated lighting systems, HVAC control, energy management, and security monitoring for buildings.",
+                "content": "GaoTech's comprehensive IoT solutions transform buildings into intelligent, connected environments. Our offerings include: Smart Environmental Sensors for real-time monitoring of temperature, humidity, air quality, and occupancy levels; Automated Lighting Systems with motion detection, daylight harvesting, and energy-efficient LED controls; Intelligent HVAC Control featuring zone-based climate management, predictive scheduling, and energy optimization; Advanced Security Monitoring with smart cameras, access control, intrusion detection, and mobile alerts; Energy Management Systems providing detailed consumption analytics, peak demand management, and automated load balancing; Water Management Solutions including leak detection, usage monitoring, and conservation automation. All systems integrate seamlessly through our centralized IoT platform, providing building owners with complete visibility and control while reducing operational costs by up to 35%.",
                 "source": {"title": "IoT Solutions", "url": "https://gaotech.com/iot-solutions"}
             },
             {
-                "content": "Smart building technologies offered by GaoTech include automated lighting control, intelligent HVAC systems, energy optimization, security integration, and real-time monitoring dashboards.",
+                "content": "GaoTech's smart building technologies create intelligent, responsive environments that adapt to occupant needs while maximizing efficiency. Our comprehensive smart building solutions include: Automated Lighting Control with occupancy sensors, daylight harvesting, and circadian rhythm optimization; Intelligent HVAC Systems featuring predictive climate control, zone-based management, and air quality monitoring; Energy Optimization through real-time consumption tracking, demand response automation, and renewable energy integration; Advanced Security Integration combining access control, video surveillance, intrusion detection, and emergency response systems; Real-time Monitoring Dashboards providing building managers with comprehensive insights into all building systems; Space Utilization Analytics to optimize office layouts and resource allocation; Predictive Maintenance Systems that identify potential issues before they become costly problems. Our smart building platform integrates all these technologies into a unified ecosystem, typically resulting in 25-40% energy savings and significantly improved occupant comfort and productivity.",
                 "source": {"title": "Smart Buildings", "url": "https://gaotech.com/smart-buildings"}
             },
             {
-                "content": "We provide comprehensive real estate technology services including property management systems, tenant engagement platforms, maintenance automation, and building performance analytics.",
-                "source": {"title": "Services", "url": "https://gaotech.com/services"}
+                "content": "GaoTech provides comprehensive real estate technology services designed to revolutionize property management. Our services include: Advanced Property Management Systems that streamline operations and automate routine tasks; Tenant Engagement Platforms featuring mobile apps, digital communication tools, and service request portals; Maintenance Automation with predictive maintenance scheduling, work order management, and vendor coordination; Building Performance Analytics offering real-time dashboards, energy usage reports, and operational insights; Smart Building Integration connecting all systems for centralized control; and 24/7 Technical Support ensuring your systems run smoothly. Our solutions are designed to increase operational efficiency by up to 40% while improving tenant satisfaction and reducing costs.",
+                "source": {"title": "Property Management Services", "url": "https://gaotech.com/services"}
             },
             {
                 "content": "GaoTech's energy management solutions help reduce building operating costs by up to 30% through intelligent monitoring, automated controls, and predictive maintenance.",
@@ -224,6 +224,14 @@ HTML_TEMPLATE = """
         button:hover { transform: translateY(-1px); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .typing { opacity: 0.7; font-style: italic; }
+        .typing-dots { 
+            display: inline-block; 
+            margin: 0 2px; 
+            opacity: 0.3; 
+            transition: opacity 0.3s ease;
+            font-size: 20px;
+            color: #2196f3;
+        }
         .sources { margin-top: 8px; font-size: 12px; opacity: 0.7; }
     </style>
 </head>
@@ -258,8 +266,8 @@ HTML_TEMPLATE = """
             addMessage(message, 'user');
             if (!text) input.value = '';
             
-            // Show typing indicator
-            const typingId = addMessage('Thinking...', 'bot typing');
+            // Show typing indicator with animation
+            const typingId = addTypingIndicator();
 
             fetch('/api/chat', {
                 method: 'POST',
@@ -269,25 +277,81 @@ HTML_TEMPLATE = """
             .then(response => response.json())
             .then(data => {
                 // Remove typing indicator
-                document.getElementById(typingId).remove();
+                removeTypingIndicator(typingId);
                 
                 let responseText = data.response || data.answer || 'Sorry, I encountered an error.';
-                const messageId = addMessage(responseText, 'bot');
                 
-                // Add sources if available
-                if (data.sources && data.sources.length > 0) {
-                    const sourcesText = 'Sources: ' + data.sources.map(s => s.title).join(', ');
-                    const messageEl = document.getElementById(messageId);
-                    const sourcesEl = document.createElement('div');
-                    sourcesEl.className = 'sources';
-                    sourcesEl.textContent = sourcesText;
-                    messageEl.appendChild(sourcesEl);
-                }
+                // Add message with typing animation
+                typeMessage(responseText, data.sources);
             })
             .catch(error => {
-                document.getElementById(typingId).remove();
-                addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                removeTypingIndicator(typingId);
+                typeMessage('Sorry, I encountered an error. Please try again.');
             });
+        }
+
+        function addTypingIndicator() {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            const messageId = 'typing-' + Date.now();
+            div.id = messageId;
+            div.className = 'message bot typing';
+            div.innerHTML = '<span class="typing-dots">●</span><span class="typing-dots">●</span><span class="typing-dots">●</span>';
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+            
+            // Animate typing dots
+            const dots = div.querySelectorAll('.typing-dots');
+            let currentDot = 0;
+            const interval = setInterval(() => {
+                dots.forEach(dot => dot.style.opacity = '0.3');
+                dots[currentDot].style.opacity = '1';
+                currentDot = (currentDot + 1) % dots.length;
+            }, 500);
+            
+            div.dataset.interval = interval;
+            return messageId;
+        }
+
+        function removeTypingIndicator(typingId) {
+            const typingEl = document.getElementById(typingId);
+            if (typingEl) {
+                clearInterval(typingEl.dataset.interval);
+                typingEl.remove();
+            }
+        }
+
+        function typeMessage(text, sources) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            div.id = messageId;
+            div.className = 'message bot';
+            messages.appendChild(div);
+            
+            let index = 0;
+            const typeSpeed = 30; // milliseconds per character
+            
+            function typeChar() {
+                if (index < text.length) {
+                    div.textContent = text.substring(0, index + 1);
+                    index++;
+                    setTimeout(typeChar, typeSpeed);
+                    messages.scrollTop = messages.scrollHeight;
+                } else {
+                    // Add sources after typing is complete
+                    if (sources && sources.length > 0) {
+                        const sourcesText = 'Sources: ' + sources.map(s => s.title || 'GaoTech Knowledge Base').join(', ');
+                        const sourcesEl = document.createElement('div');
+                        sourcesEl.className = 'sources';
+                        sourcesEl.textContent = sourcesText;
+                        div.appendChild(sourcesEl);
+                    }
+                }
+            }
+            
+            typeChar();
+            return messageId;
         }
 
         function addMessage(text, sender) {
