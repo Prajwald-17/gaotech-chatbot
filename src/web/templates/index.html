@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate IoT Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.bot .message-content {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            margin-left: 10px;
+        }
+
+        .message.user .message-content {
+            background: #2196f3;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+        }
+
+        .message.bot .message-avatar {
+            background: #2196f3;
+        }
+
+        .message.user .message-avatar {
+            background: #4caf50;
+        }
+
+        .sources {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .source-link {
+            display: block;
+            color: #2196f3;
+            text-decoration: none;
+            margin: 2px 0;
+        }
+
+        .source-link:hover {
+            text-decoration: underline;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #2196f3;
+        }
+
+        .send-button {
+            padding: 15px 25px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .send-button:hover {
+            background: #1976d2;
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .starters-container {
+            padding: 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .starters-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .starter-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .starter-button {
+            padding: 8px 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .starter-button:hover {
+            background: #2196f3;
+            color: white;
+            border-color: #2196f3;
+        }
+
+        .starters-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background-color: #333;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .bot-message.typing {
+            position: relative;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .welcome-message h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .starter-buttons {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .starter-button {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🏠 Real Estate IoT Assistant</h1>
+            <p>Ask me anything about Real Estate IoT solutions and services</p>
+        </div>
+
+        <div class="starters-container" id="startersContainer">
+            <div class="starters-title">💬 Quick questions (always available - click any to ask):</div>
+            <div class="starter-buttons" id="starterButtons">
+                <!-- Starter buttons will be loaded here -->
+            </div>
+            <div class="starters-note">💡 You can ask about IoT solutions, smart building technology, careers, or any topic from our website!</div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h2>Welcome! 👋</h2>
+                <p>I'm here to help you learn about Real Estate IoT solutions. The suggested questions above are always available - click any of them anytime, or type your own question below.</p>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            Assistant is typing...
+        </div>
+
+        <div class="chat-input-container">
+            <form class="chat-input-form" id="chatForm">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Ask me about Real Estate IoT..."
+                    autocomplete="off"
+                >
+                <button type="submit" class="send-button" id="sendButton">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        class ChatInterface {
+            constructor() {
+                this.chatMessages = document.getElementById('chatMessages');
+                this.chatInput = document.getElementById('chatInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.chatForm = document.getElementById('chatForm');
+                this.typingIndicator = document.getElementById('typingIndicator');
+                this.startersContainer = document.getElementById('startersContainer');
+                this.starterButtons = document.getElementById('starterButtons');
+                
+                this.init();
+            }
+
+            init() {
+                this.chatForm.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.loadStarters();
+                this.chatInput.focus();
+            }
+
+            async loadStarters() {
+                try {
+                    const response = await fetch('/api/starters');
+                    const data = await response.json();
+                    
+                    this.starterButtons.innerHTML = '';
+                    // Show more starter buttons (12 instead of 6)
+                    data.starters.slice(0, 12).forEach(starter => {
+                        const button = document.createElement('button');
+                        button.className = 'starter-button';
+                        button.textContent = starter;
+                        button.onclick = () => this.sendMessage(starter);
+                        this.starterButtons.appendChild(button);
+                    });
+                } catch (error) {
+                    console.error('Error loading starters:', error);
+                    // Show fallback starters if API fails
+                    const fallbackStarters = [
+                        "What is Real Estate IoT and what do you do?",
+                        "What IoT solutions do you offer for buildings?",
+                        "What career opportunities are available?",
+                        "How can I contact Real Estate IoT?"
+                    ];
+                    
+                    fallbackStarters.forEach(starter => {
+                        const button = document.createElement('button');
+                        button.className = 'starter-button';
+                        button.textContent = starter;
+                        button.onclick = () => this.sendMessage(starter);
+                        this.starterButtons.appendChild(button);
+                    });
+                }
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                const message = this.chatInput.value.trim();
+                if (message) {
+                    await this.sendMessage(message);
+                }
+            }
+
+            async sendMessage(message) {
+                // Clear input but keep starters visible
+                this.chatInput.value = '';
+                // this.hideStarters(); // Keep starters always visible
+                
+                // Add user message
+                this.addMessage(message, 'user');
+                
+                // Show typing indicator
+                this.showTyping();
+                
+                // Disable input
+                this.setInputEnabled(false);
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.status === 'error') {
+                        this.addMessage(`I apologize, but I encountered an issue while processing your question about Real Estate IoT. Please try rephrasing your question or ask about our IoT solutions, smart building technology, or career opportunities. Error details: ${data.error}`, 'bot');
+                    } else {
+                        this.addMessage(data.answer, 'bot', data.sources);
+                    }
+                } catch (error) {
+                    this.addMessage('I\'m having trouble connecting to the Real Estate IoT knowledge base right now. Please try again in a moment, or ask me about our IoT efficiency solutions, safety & security systems, or sustainability monitoring services.', 'bot');
+                    console.error('Error:', error);
+                } finally {
+                    this.hideTyping();
+                    this.setInputEnabled(true);
+                    this.chatInput.focus();
+                }
+            }
+
+            addMessage(content, sender, sources = null) {
+                if (sender === 'bot') {
+                    this.addBotMessageWithTyping(content, sources);
+                } else {
+                    this.addUserMessage(content);
+                }
+            }
+
+            addUserMessage(content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message user';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = 'You';
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                messageContent.textContent = content;
+
+                messageDiv.appendChild(messageContent);
+                messageDiv.appendChild(avatar);
+
+                this.chatMessages.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            addBotMessageWithTyping(content, sources = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message bot typing';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = 'AI';
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(messageContent);
+                this.chatMessages.appendChild(messageDiv);
+
+                // Start typing animation
+                this.typeMessage(messageContent, content, sources, messageDiv);
+            }
+
+            typeMessage(element, text, sources, messageDiv) {
+                element.innerHTML = '';
+                let index = 0;
+                const cursor = document.createElement('span');
+                cursor.className = 'typing-cursor';
+                element.appendChild(cursor);
+
+                const typeChar = () => {
+                    if (index < text.length) {
+                        // Remove cursor, add character, add cursor back
+                        element.removeChild(cursor);
+                        element.textContent = text.substring(0, index + 1);
+                        element.appendChild(cursor);
+                        index++;
+                        
+                        // Random typing speed between 5-15ms for faster typing
+                        const delay = Math.random() * 10 + 5;
+                        setTimeout(typeChar, delay);
+                        this.scrollToBottom();
+                    } else {
+                        // Typing complete, remove cursor and add sources
+                        element.removeChild(cursor);
+                        messageDiv.classList.remove('typing');
+                        
+                        // Add sources if available
+                        if (sources && sources.length > 0) {
+                            const sourcesDiv = document.createElement('div');
+                            sourcesDiv.className = 'sources';
+                            sourcesDiv.innerHTML = '<strong>Sources:</strong>';
+                            
+                            sources.slice(0, 3).forEach((source, index) => {
+                                const sourceLink = document.createElement('a');
+                                sourceLink.className = 'source-link';
+                                sourceLink.href = source.url;
+                                sourceLink.target = '_blank';
+                                sourceLink.textContent = `${index + 1}. ${source.title}`;
+                                sourcesDiv.appendChild(sourceLink);
+                            });
+                            
+                            element.appendChild(sourcesDiv);
+                        }
+                        this.scrollToBottom();
+                    }
+                };
+
+                // Start typing after a brief delay
+                setTimeout(typeChar, 500);
+            }
+
+            hideStarters() {
+                // Keep starters always visible - do nothing
+                // this.startersContainer.style.display = 'none';
+            }
+
+            showTyping() {
+                this.typingIndicator.style.display = 'block';
+                this.scrollToBottom();
+            }
+
+            hideTyping() {
+                this.typingIndicator.style.display = 'none';
+            }
+
+            setInputEnabled(enabled) {
+                this.chatInput.disabled = !enabled;
+                this.sendButton.disabled = !enabled;
+            }
+
+            scrollToBottom() {
+                setTimeout(() => {
+                    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        // Initialize chat interface when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatInterface();
+        });
+    </script>
+</body>
+</html>

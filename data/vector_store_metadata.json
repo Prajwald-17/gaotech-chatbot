@@ -1,0 +1,9 @@
+{
+  "use_openai": false,
+  "num_chunks": 94,
+  "embedding_shape": [
+    94,
+    1000
+  ],
+  "created_at": "2025-08-05T23:28:24.215904"
+}
