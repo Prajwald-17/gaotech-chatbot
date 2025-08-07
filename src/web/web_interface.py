@@ -131,7 +131,7 @@ def chat_api():
         
         if not query:
             return jsonify({
-                'error': 'Empty message',
+                'response': 'Please enter a message.',
                 'status': 'error'
             }), 400
         
@@ -145,13 +145,56 @@ def chat_api():
         # Get response from chatbot
         response = chatbot.chat(query, include_sources=True)
         
+        # Ensure response has the right format
+        if 'answer' in response and 'response' not in response:
+            response['response'] = response['answer']
+        
+        # Make sure we have a response field
+        if 'response' not in response:
+            response['response'] = "I apologize, but I couldn't generate a proper response. Please try again."
+        
         return jsonify(response)
         
     except Exception as e:
+        print(f"Chat API error: {e}")
         return jsonify({
-            'error': str(e),
-            'status': 'error'
+            'response': 'I apologize, but I encountered an error. Please try again.',
+            'status': 'error',
+            'error': str(e)
         }), 500
+
+@app.route('/api/debug', methods=['POST'])
+def debug_chat():
+    """Debug chat endpoint"""
+    try:
+        data = request.get_json()
+        query = data.get('message', 'test')
+        
+        debug_info = {
+            'chatbot_initialized': chatbot is not None,
+            'query_received': query,
+            'chatbot_type': str(type(chatbot)) if chatbot else None
+        }
+        
+        if chatbot:
+            try:
+                # Test vector store
+                context = chatbot.retrieve_context(query, top_k=2)
+                debug_info['context_chunks'] = len(context)
+                debug_info['context_sample'] = context[:1] if context else []
+                
+                # Test response generation
+                response = chatbot.generate_answer_free(query, context)
+                debug_info['response_keys'] = list(response.keys())
+                debug_info['response'] = response
+                
+            except Exception as e:
+                debug_info['error'] = str(e)
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/api/starters')
 def get_starters():
