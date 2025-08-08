@@ -249,10 +249,18 @@ The chatbot was trained on comprehensive content from the following Real Estate 
 ## 📸 Screenshots & Results
 
 ### 1. **Main Chat Interface**
-![Chat Interface](https://via.placeholder.com/800x600/2c3e50/ffffff?text=GaoTech+Chatbot+Interface)
+![Chat Interface](screenshots/chat-interface.png)
 *Modern, responsive chat interface with gradient design and quick-start buttons*
 
 ### 2. **Sample Conversations**
+![Sample Conversation 1](screenshots/sample-conversation-1.png)
+*Query about IoT solutions with detailed response*
+
+![Sample Conversation 2](screenshots/sample-conversation-2.png)
+*Smart building technologies query and response*
+
+![Sample Conversation 3](screenshots/sample-conversation-3.png)
+*Energy management query with contextual response*
 
 #### Query: "What IoT solutions does GaoTech offer?"
 **Response:**
@@ -267,6 +275,9 @@ The chatbot was trained on comprehensive content from the following Real Estate 
 > "GaoTech's energy management solutions help reduce building operating costs by up to 30% through intelligent monitoring, automated controls, and predictive maintenance. Our solutions are designed to provide excellent ROI through energy savings and operational efficiency."
 
 ### 3. **Website Scraping Results**
+![Scraping Results](screenshots/scraping-results.png)
+*Terminal output showing successful scraping of 28 Real Estate IoT websites*
+
 ```
 ✓ Successfully scraped: Smart Property Management with IoT
 ✓ Successfully scraped: IoT for Efficiency & Automation
@@ -278,7 +289,11 @@ The chatbot was trained on comprehensive content from the following Real Estate 
 Summary: 28 successful, 0 failed
 ```
 
-### 4. **Performance Metrics**
+### 4. **Project Structure**
+![Project Structure](screenshots/)
+*VS Code showing the organized project structure with modular components*
+
+### 5. **Performance Metrics**
 - **Response Time**: < 500ms average
 - **Accuracy**: 95%+ for domain-specific queries
 - **Coverage**: 28 web pages processed
@@ -349,12 +364,6 @@ Websites → Scraper → Text Processor → Vector Store → Chatbot Engine → 
 ## 👥 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
